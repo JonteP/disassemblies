@@ -39,7 +39,9 @@
 0000:C09A RAM_BGNametable1Pnt
 0000:C09C RAM_BGNametable2Pnt
 0000:C09E RAM_BGGraphicsBank
+0000:c0ab RAM_BossFight
 0000:c0ae RAM_RemovedObjectsOffset
+0000:c0b7 RAM_AutoScroll
 0000:C0BD RAM_CurrentHealth
 0000:C0C0 RAM_UpdateHealthBar
 0000:C0C1 RAM_MaxHealth
@@ -74,6 +76,7 @@
 0000:C197 RAM_AnimateBG
 0000:C19A RAM_AnimatedBGTilePos
 0000:C200 RAM_MickeyObjectOffset
+0000:c209 RAM_MickeyDirection
 0000:C20A RAM_MickeyYPositionLow
 0000:C20B RAM_MickeyYPositionHigh
 0000:C20C RAM_MickeyXPositionLow
@@ -257,6 +260,51 @@
 00:1ebc ClearMickeyObject
 00:1f4e FadeMusic
 00:1f5c ModeEnterTheDragon
+00:1f9e LoadEntryPosition
+00:1fca GetEntryPositionPointers
+00:1fe0 GetStage1EntryPosition
+00:1ff4 GetStage2EntryPosition
+00:2013 GetStage3EntryPosition
+00:2031 GetStage4EntryPosition
+00:2058 GetStage5EntryPosition
+00:207c GetStage6EntryPosition
+00:208b GetPractice3EntryPosition
+00:2090 GetPractice1EntryPosition
+00:2093 GetPractice2EntryPosition
+00:2096 GetEndBossEntryPosition
+00:20a5 GetHubEntryPosition
+00:20fe Stage1EntryPosition2
+00:2107 Stage1EntryPosition1
+00:2110 Stage1EntryPosition3
+00:2119 Stage2EntryPosition1
+00:2122 Stage2EntryPosition3
+00:212b Stage2EntryPosition4
+00:2134 Stage3EntryPosition1
+00:213d Stage3EntryPosition2
+00:2146 Stage3EntryPosition4
+00:214f Stage4EntryPosition1
+00:2158 Stage4EntryPosition3
+00:2161 Stage4EntryPosition2
+00:216a Stage4EntryPosition4
+00:2173 Stage4EntryPosition5
+00:217c Stage5EntryPosition3
+00:2185 Stage5EntryPosition2
+00:218e Stage5EntryPosition1
+00:2197 Stage6EntryPosition1
+00:21a0 Stage6EntryPosition2
+00:21a9 Stage6EntryPosition3
+00:21b2 Practice13EntryPosition
+00:21bb Practice2EntryPosition
+00:21c4 DragonEntryPosition
+00:21cd WitchEntryPosition
+00:21d6 HubEntranceEntryPosition
+00:21df HubNormalEntryPosition1
+00:21e8 HubNormalEntryPosition2
+00:21f1 HubNormalEntryPosition4
+00:21fa HubPracticeEntryPosition
+00:220c Stage2EntryPosition2
+00:2215 Stage3EntryPosition3
+00:221e HubNormalEntryPosition3
 00:282d InitMickeyObject
 01:44e8 GetNametableAttributeYOffset
 01:44f6 GetCollisionBits
@@ -582,5 +630,9 @@
 0e:bcb6 OldManHandler
 0e:be68 Donut2Handler
 0f:b1b7 PendulumTilePointerTable
+
+
+;COMMENTS
+00:1fbf ;Mickey Y position
 
 [definitions]
