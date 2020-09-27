@@ -1,6 +1,6 @@
 [labels]
 
-;RAM values
+;RAM
 0000:C00A RAM_HighscoreLow
 0000:C00B RAM_HighscoreMid
 0000:C00C RAM_HighscoreHigh
@@ -20,6 +20,9 @@
 0000:C061 RAM_IRQMode
 0000:C062 RAM_SetPauseFlag
 0000:C06D RAM_CurrentStage
+0000:c06f RAM_StageXPosition
+0000:c075 RAM_RightBoundary
+0000:c076 RAM_LeftBoundary
 0000:C07C RAM_ScrollNametable
 0000:C082 RAM_MickeyDirection
 0000:C083 RAM_MickeySpriteUpdate
@@ -33,9 +36,10 @@
 0000:C094 RAM_BGBlockSource1
 0000:C096 RAM_BGPalettePnt
 0000:C098 RAM_BGPatternPnt
-0000:C09A RAM_BGNTable2Pnt
-0000:C09C RAM_BGNTable1Pnt
+0000:C09A RAM_BGNametable1Pnt
+0000:C09C RAM_BGNametable2Pnt
 0000:C09E RAM_BGGraphicsBank
+0000:c0ae RAM_RemovedObjectsOffset
 0000:C0BD RAM_CurrentHealth
 0000:C0C0 RAM_UpdateHealthBar
 0000:C0C1 RAM_MaxHealth
@@ -82,8 +86,8 @@
 0000:C300 RAM_ObjectOffset; or is it from c260?
 0000:C600 RAM_MickeyPatterns
 0000:C700 RAM_Patterns
-0000:CA00 RAM_CompNTable1
-0000:D000 RAM_CompNTable2
+0000:CA00 RAM_CompNametableIndices
+0000:D000 RAM_CompNametableData
 0000:D400 RAM_AnimatedBGFrame1
 0000:D440 RAM_AnimatedBGFrame2
 0000:D500 RAM_SpriteAttrY
@@ -118,9 +122,10 @@
 0000:dd0b RAM_SoundTimerReload
 
 ;Mapper ports:
-0000:FFFF Mapper_Bank2
+0000:fffc Mapper_Control
+0000:ffff Mapper_Bank2
 
-;Routines
+;ROM
 00:0000 Start
 00:0008 ParseJumpTable
 00:000e ParseJumpTable@LoadPointer
@@ -134,11 +139,13 @@
 00:0072 NMIHandler@Return
 00:0075 PauseGame
 00:00a8 ModeGamePaused
+00:00b3 IRQMode0; when?
 00:00f2 InitGame
 00:010c ResetGame
 00:012e MainLoop
-00:0138 GameModeJumpTable; TODO: confirm
+00:0138 GameModeJumpTable
 00:016c DecodePatternsToVRAM
+00:01a7 WriteDataToVRAM
 00:01bb FillVRAM; Write HL to DE BC times.
 00:01c1 FillVRAM@Loop
 00:01e9 TileDataToVRAM; TODO: confirm
@@ -227,11 +234,12 @@
 00:1470 MickeyDies
 00:1496 MickeyDies@NoLivesLeft
 00:14d2 ClearSpriteRAM
+00:14d8 CopyNametableToVRAM
 00:14ee LoadStageSpritePalette
 00:14fe GetStageGfxPointers
 00:1520 DecodeStageGfx
 00:1625 ThrowBlockPatternPointers
-00:1639 StageSpritePalettePointers
+00:1639 SpritePalettePointers
 00:164d SpritePalette1
 00:165d SpritePalette2
 00:166d SpritePalette3
@@ -240,6 +248,7 @@
 00:16ad StageGraphicsPointerTable
 00:1844 ScrollOneColumn
 00:185e ScrollOneColumn@TileToVRAM
+00:1872 ModeHubFloorTransition
 00:1987 ModeFloorTransition
 00:1d75 ModeEnterWitch1;TODO:figure out
 00:1dc5 ModeEnterWitch2;TODO:figure out
@@ -250,6 +259,7 @@
 00:1f5c ModeEnterTheDragon
 00:282d InitMickeyObject
 01:44e8 GetNametableAttributeYOffset
+01:44f6 GetCollisionBits
 01:49ef MickeyPatternToVRAM
 01:4a04 CopyToVRAM_640
 01:4e04 CopyToVRAM_128
@@ -332,6 +342,7 @@
 01:64c6 DrawExplodingDoor@DrawAnimationFrame
 01:64d5 DrawRainbow
 01:64ee DrawRainbow@DrawAnimationFrame
+01:6bc8 ResetRemovedObjects; Clears bits used for keeping track of opened chests and such.
 01:6ce7 AnimateObject
 01:6d92 InGameClock
 01:6dbf InGameClock@ReloadClockTimer
@@ -396,15 +407,24 @@
 07:8c81 WormGfxPointers@SwingRight1
 07:8c8f WormGfxPointers@SwingRight2
 07:8c9d WormGfxPointers@Die
+08:8000 Stage1BGPalette
+08:8010 Stage1BGPatterns
+08:8b70 Stage1NametableData
+08:9679 Stage1NametableIndices
 08:bc2b MickeyLeftPatterns
+09:8000 Stage2BGPalette
+09:8010 Stage2BGPatterns
+09:8943 Stage2NametableData
+09:8b83 Stage2NametableIndices
+0a:8000 Stage3BGPalette
+0a:8010 Stage3BGPatterns
+0a:8959 Stage3NametableData
+0a:9223 Stage3NametableIndices
 0b:3311 CharPatterns
-0b:8000 Bank_Stage45
 0b:b625 HighPriorityDigitTileData
 0b:b639 StatusDisplayTileData
 0b:b8b5 SelectArrowTileData
 0b:b749 LowPriorityDigitTileData
-0c:8000 Bank_Stage6
-0d:8000 Bank_Hub
 0d:a063 WingsTilePointerTable
 0d:a06b DragonTilePointerTable
 0d:a0a3 DragonDeathTilePointerTable
@@ -448,6 +468,7 @@
 0e:8522 GetBGCollisionForObject_2@AdjustedPositionLeft
 0e:8540 GetBGCollisionForObject_2@CheckObjectOnScreen
 0e:8547 GetBGCollisionForObject_2@Return
+0e:85db GetCollisionBits_2
 0e:85e8 Boss1Handler
 0e:8770 GemHandler
 0e:8842 Boss1LeafHandler
