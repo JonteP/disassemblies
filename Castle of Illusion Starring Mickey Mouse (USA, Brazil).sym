@@ -1,11 +1,22 @@
 [labels]
 
 ;RAM
+0000:c002 RAM_ConsoleVideoSystem; 0=PAL, 1=NTSC
 0000:C00A RAM_HighscoreLow
 0000:C00B RAM_HighscoreMid
 0000:C00C RAM_HighscoreHigh
 0000:c010 RAM_VDPReg0
 0000:c011 RAM_VDPReg1
+0000:c012 RAM_VDPReg2
+0000:c013 RAM_VDPReg3
+0000:c014 RAM_VDPReg4
+0000:c015 RAM_VDPReg5
+0000:c016 RAM_VDPReg6
+0000:c017 RAM_VDPReg7
+0000:c018 RAM_VDPReg8
+0000:c019 RAM_VDPReg9
+0000:c01a RAM_VDPRegA
+0000:c017 RAM_CurrentBackdropColor;?
 0000:C018 RAM_XScroll
 0000:C01B RAM_P1HeldButtons
 0000:C01C RAM_P1PressedButtons
@@ -33,29 +44,49 @@
 0000:C08A RAM_ScoreHigh
 0000:C08B RAM_NextBonusLife
 0000:C090 RAM_CurrentFloor
+0000:c092 RAM_ThrowBlockReplacement
 0000:C094 RAM_BGBlockSource1
 0000:C096 RAM_BGPalettePnt
 0000:C098 RAM_BGPatternPnt
 0000:C09A RAM_BGNametable1Pnt
 0000:C09C RAM_BGNametable2Pnt
 0000:C09E RAM_BGGraphicsBank
+0000:c09f RAM_SetEndingFlag
 0000:c0ab RAM_BossFight
 0000:c0ae RAM_RemovedObjectsOffset
 0000:c0b7 RAM_AutoScroll
+0000:c0b9 RAM_HubFloor
+0000:c0ba RAM_HubState
+0000:c0bb RAM_HubHeldButtons
+0000:c0bc RAM_HubPressedButtons
 0000:C0BD RAM_CurrentHealth
+0000:c0be RAM_LastHealth; cmp against RAM_CurrentHealth to see whether health bar needs update
 0000:C0C0 RAM_UpdateHealthBar
 0000:C0C1 RAM_MaxHealth
+0000:c0c2 RAM_LastMaxHealth; compare to RAM_LastHealth
+0000:c0c3 RAM_DoorToClear; bit 7 indicates a level is finished, low bits indicate which door
+0000:c0c4 RAM_ClearedDoors; set bits indicate cleared stage doors
+0000:c0c5 RAM_Difficulty2 ;diff from c100?
 0000:C0C6 RAM_ContinuesLeft
 0000:C0C7 RAM_DrawLifeCounter
 0000:C0C8 RAM_LivesLeft
 0000:C0CF RAM_InhibitPause
+0000:c0dc RAM_MickeyGroundCollPnt1;pointer to jump table for setting collision bit 0 in c122
+0000:c0de RAM_MickeyGroundCollPnt2
+0000:c0e0 RAM_MickeyGroundCollPnt3
+0000:c0e2 RAM_MickeyGroundCollPnt4
+0000:c0e4 RAM_MickeyGroundCollPnt5
 0000:C100 RAM_Difficulty
 0000:C109 RAM_HitObjectXPosition ;(used for throwing Mickey when hit)
 0000:C10E RAM_BGBlockDest1
 0000:C110 RAM_BGBlockToChange1
+0000:c116 RAM_InteractObjectPointer
+0000:c11b RAM_CatapultObjectPointer
+0000:c122 RAM_MickeyGroundCollRange;bits 0-4 represent "columns" of Mickey
 0000:C139 RAM_ButtAttack ;(only when targeting object)
+0000:c150 RAM_BGBlockRAMDest2
 0000:C152 RAM_BGBlockSource2
-0000:C155 RAM_BGBlockDest2
+0000:C155 RAM_BGBlockVRAMDest2
 0000:C157 RAM_BGBlockToChange2
 0000:C158 RAM_ShakeYEnabled
 0000:C159 RAM_ShakeYTimer
@@ -64,18 +95,21 @@
 0000:C160 RAM_BGBlockSource3
 0000:C162 RAM_BGBlockDest3
 0000:C164 RAM_BGBlockToChange3
+0000:c172 RAM_LanternLightFlag; bool
 0000:C173 RAM_BossPendulumEnabled
 0000:C177 RAM_GateOpenFrame
 0000:C179 RAM_DragonAnimState
 0000:C17D RAM_DrawDragonDying
 0000:C180 RAM_DoorExplodeFrame
 0000:C182 RAM_DoorExpVRAMOffset
+0000:c184 RAM_HubLadderDrawPosition
+0000:c185 RAM_HubLadderDrawCounter
 0000:C187 RAM_RainbowFrame
 0000:C193 RAM_DisplayTotalScore
 0000:C194 RAM_DisplayContinues
 0000:C197 RAM_AnimateBG
 0000:C19A RAM_AnimatedBGTilePos
-0000:C200 RAM_MickeyObjectOffset
+0000:C200 RAM_MickeyState
 0000:c209 RAM_MickeyDirection
 0000:C20A RAM_MickeyYPositionLow
 0000:C20B RAM_MickeyYPositionHigh
@@ -85,7 +119,11 @@
 0000:C20F RAM_MickeyYVelocityHigh
 0000:C210 RAM_MickeyXVelocityLow
 0000:C211 RAM_MickeyXVelocityHigh
+0000:c222 RAM_MickeyAction ;b0:in air, b1:duck, b2:carry, b3:climb, b4:??, b5:swim, b6:get hit, b7:die
+;0000:c223 ?? b0:standing on sprite
 0000:C224 RAM_MickeyIsHit
+;0000:c229 ?? Mickey is interacting with object/item?
+0000:c22c RAM_MickeyOnCatapultObject
 0000:C300 RAM_ObjectOffset; or is it from c260?
 0000:C600 RAM_MickeyPatterns
 0000:C700 RAM_Patterns
@@ -138,6 +176,7 @@
 00:0038 IRQHandler
 00:0048 WaitForIRQ
 00:004c WaitForIRQ@WaitLoop
+00:0060 _EMPTY_ROM_
 00:0066 NMIHandler
 00:0072 NMIHandler@Return
 00:0075 PauseGame
@@ -152,6 +191,9 @@
 00:01bb FillVRAM; Write HL to DE BC times.
 00:01c1 FillVRAM@Loop
 00:01e9 TileDataToVRAM; TODO: confirm
+00:0230 SetVDPRegisterDefaults
+00:0249 WriteByteToVRAM
+00:024f VDPRegisterDefaults
 00:025a ReadPeripherals
 00:0284 AddBonusScore
 00:02b5 AddBonusScore@AddScoreFromTable
@@ -159,17 +201,24 @@
 00:02de AddBonusScore@UpdateHighscore
 00:0304 AddBonusScore@ScoreTable
 00:0316 DecodeNametableToRAM
+00:0366 ClearScreen; Fades to black, clears nametable and sprites, and resets line int and X scroll.
 00:039f FadeIn@SetVDPModeControl
 00:03c1 FadeIn
 00:03c6 FadeOut
 00:0451 PrepareforIRQ
+00:047c DetectVideoSystem
+00:04e8 NegateDE
+00:04ef NegateHL
 00:04f6 GetTwoPointersFromTable
 00:04fd GetTwoPointersFromTable@LoadPointers
 00:0506 DestroyObject
 00:050e ClearObjectRAM; TODO: confirm
 00:051c ClearRAM
 00:0524 ClearRAMFlags
+00:053e ResetYScroll
 00:0547 ResetXScroll
+00:0550 SetBackdropColor2
+00:0555 SetBackdropColor0
 00:055e SetVDPControl
 00:0565 HandleIRQEnabled
 00:0578 HandleIRQEnabled@IRQJumpTable
@@ -191,7 +240,7 @@
 00:0741 NametableRegionToVRAM;Replaces a region of the VRAM nametable with tile values in RAM (Arguments: DE = VRAM nametable offset, HL = source, B = height of region, C = width of region x 2)
 00:074b NametableRegionToVRAM@CopyToVRAM
 00:0758 NametableRegionToVRAM@LoopNextRow
-00:075c ChangeBackgroundBlock2; Build/destroy walls in boss rooms, boss 3 bricks, animate floor buttons...
+00:075c BackgroundBlockToVRAM2; Build/destroy walls in boss rooms, boss 3 bricks, animate floor buttons, draw ladder in hub
 00:0770 ChangeBackgroundBlock3; Used for piano keys in stage 4.
 00:0784 ShakeScreenY; Shakes entire screen vertically for a set time period. Used for enemies in stage 6.
 00:0797 ShakeScreenY@KeepShakeEnabled
@@ -201,6 +250,7 @@
 00:07b9 ShakeScreenX@KeepShakeEnabled
 00:07bb ShakeScreenX@DisableShake
 00:07c1 ShakeScreenX@UpdateXScroll
+00:07c5 UpdateLanternDimming
 00:07db ClockBossPendulum; Animates the pendulum on the boss in stage 5.
 00:07f4 ClockBossPendulum@CopyToVRAM
 00:082e AnimateBackground; Used for e.g. water surface in stage 3 and threaded rods in stage 5.
@@ -215,6 +265,8 @@
 00:095d ModeDifficultySelect@UpdateArrowGraphics
 00:0972 ModeSetGameOver
 00:0a25 ModeInGameOver
+00:0a64 ModeInGameOver@StatePointers
+00:0b02 ResetScore
 00:0b66 ModeResetGame
 00:0b79 ModeResetGame@ResetPlayerStatus
 00:0bd6 ModeIntro
@@ -232,10 +284,15 @@
 00:0ffd ModeSetCredits
 00:10b0 ModeInCredits
 00:11e7 ModeEnterStage
+00:12ce DrawStatusTemplate
+00:12e8 FillHealthBar
 00:12fa SetDisplayScoreFlag
 00:1300 ModeInStage
+00:13ef SetEndingSequence
 00:1470 MickeyDies
 00:1496 MickeyDies@NoLivesLeft
+00:149c Pause256Frames
+00:14a0 Pause128Frames
 00:14d2 ClearSpriteRAM
 00:14d8 CopyNametableToVRAM
 00:14ee LoadStageSpritePalette
@@ -253,6 +310,7 @@
 00:185e ScrollOneColumn@TileToVRAM
 00:1872 ModeHubFloorTransition
 00:1987 ModeFloorTransition
+00:1d67 HubNametableIndexPointers
 00:1d75 ModeEnterWitch1;TODO:figure out
 00:1dc5 ModeEnterWitch2;TODO:figure out
 00:1e62 ModeEnterDoor; TODO: used outside stage 6?
@@ -305,9 +363,104 @@
 00:220c Stage2EntryPosition2
 00:2215 Stage3EntryPosition3
 00:221e HubNormalEntryPosition3
+00:262b BackgroundBlockToRAMBuffer2
 00:282d InitMickeyObject
+00:2935 MickeyStandingOnObject
+00:29af MickeyOnCatapultObject
+00:2c22 ResetMickeyXVelocity
+00:2f74 ResetMickeyYVelocity
+00:2f7b SetMickeyStateGraphics
+00:2a60 MickeyTippingHandler
+00:2a83 MickeyStandingHandler
+00:2ab4 MickeyWalkingHandler
+00:2b38 MickeyDuckingHandler
+00:2b75 MickeyBrakingLandingHandler
+00:2bb9 MickeyJumpingHandler
+00:2bd8 MickeyFallingHandler
+00:2c29 MickeyButtingHandler
+00:2c6e MickeySlidingHandler
+00:2cb7 MickeySittingHandler
+00:2ce7 MickeyClimbingLadderHandler
+00:2d83 MickeyEnteringLadderHandler
+00:2d9a MickeyLeavingLadderHandler
+00:2dad MickeySwimmingHandler
+00:2ebf MickeyIsHitHandler
+00:2ecb MickeyKnockedBackHandler
+00:2f04 MickeyDyingHandler
+00:2f0b MickeyDroppingDeadHandler
+00:2f1f MickeyGameOverFallingHandler
+00:2f27 MickeyGameOverLandingHandler
+00:2f2e MickeySeeingStarsHandler
+00:2f98 MickeyPickingHandler
+00:2fbb MickeyLiftingHandler
+00:2fd3 MickeyCarryingHandler
+00:2ff1 MickeyCarryWalkingHandler
+00:3016 MickeyCarryBrakingHandler
+00:304b MickeyCarryJumpingHandler
+00:306e MickeyCarryFallingHandler
+00:3084 MickeyThrowingHandler
+00:30a7 MickeyJumpThrowingHandler
+00:32bd MickeyStateGfxTable
+00:34db MickeyStateJumpTable
+00:3563 SetMickeyStandingState
+00:3570 SetMickeyWalkingState
+00:357a SetMickeyBrakingState
+00:35a4 SetMickeyDuckingState
+00:35d6 SetMickeyLandingState
+00:35e8 SetMickeySittingState
+00:36b3 SetMickeyCarryingState
+00:3717 SetMickeyThrowingState
+00:3725 SetMickeyTippingState
+00:3740 SetMickeyEnteringLadderState
+00:3752 SetMickeyLeavingLadderState
+00:3767 SetMickeyClimbingLadderState
+00:3788 SetMickeySwimmingStateFromBottom
+00:378b SetMickeySwimmingState
+00:379d SetMickeyStandingInFluidState
+00:37a7 SetMickeyWalkingInFluidState
+00:37b5 SetMickeyBrakingInFluidState
+00:37bc SetMickeyPickingInFluidState
+00:37c6 SetMickeyLiftingInFluidState
+00:37cd SetMickeyCarryingInFluidState
+00:37d7 SetMickeyCarryWalkingInFluidState
+00:37de SetMickeyCarryBrakingInFluidState
+00:37e5 SetMickeyCarryJumpingInFluidState
+00:37fa SetMickeyThrowingInFluidState; TODO:double check
+00:3800 SetMickeyJumpThrowingInFluidState; TODO:double check
+00:3888 SetMickeyIsHitState
+00:38ae SetMickeyDropDeadState
+00:38db SetMickeySeeingStarsState
+00:3956 SetMickeyDuckingUpRightState
+00:3960 SetMickeyDuckingDownLeftState
+00:3993 SetMickeyWalkingUpRightState
+00:399d SetMickeyWalkingDownLeftState
+00:3b4a MickeyStandingSlopeHandler
+00:3b5a MickeyCarryingSlopeHandler
+00:3b6a MickeyDuckingUpRightHandler
+00:3b71 MickeyDuckingDownLeftHandler
+00:3b78 MickeyDuckingUpLeftHandler
+00:3b7f MickeyDuckingDownRightHandler
+00:3ba9 MickeyCarryWalkingUpRightHandler
+00:3bc1 MickeyWalkingUpRightHandler
+00:3be7 MickeyCarryWalkingDownLeftHandler
+00:3bff MickeyWalkingDownLeftHandler
+00:3c34 MickeyCarryWalkingUpLeftHandler
+00:3c4c MickeyWalkingUpLeftHandler
+00:3c72 MickeyCarryWalkingDownRightHandler
+00:3c8a MickeyWalkingDownRightHandler
+01:42ba SetMickeyGroundCollisionLeft
+01:42c0 SetMickeyGroundCollisionLeftCenter
+01:42c6 SetMickeyGroundCollisionCenter
+01:42cc SetMickeyGroundCollisionRightCenter
+01:42d2 SetMickeyGroundCollisionRight
+01:44ae GetMickeyGroundNametableAttrYOffset
 01:44e8 GetNametableAttributeYOffset
 01:44f6 GetCollisionBits
+01:4503 GetMickeyGroundNametableAttrLeftCenter
+01:4507 GetMickeyGroundNametableAttrLeft
+01:4523 GetMickeyGroundNametableAttrRightCenter
+01:4527 GetMickeyGroundNametableAttrRight
+01:4541 GetMickeyGroundNametableAttrCenter
 01:49ef MickeyPatternToVRAM
 01:4a04 CopyToVRAM_640
 01:4e04 CopyToVRAM_128
@@ -320,14 +473,23 @@
 01:4f62 SetObjectStatic
 01:4f64 SetObjectAnimated
 01:4f6a UpdateObjectAnimation
-01:4f99 AccelerateObjectY
-01:4fa9 AccelerateObjectY@SetVelocity
+01:4f99 AccelerateObjectYLimit
+01:4fa9 AccelerateObjectYLimit@SetVelocity
 01:4fac HaltObjectY
+01:4fc1 SetObjectDirectionTowardsMickey; Only used by rolling rocks, stage 1.
+01:4fcc SetObjectDirectionTowardsMickey@SetDirection
+01:4ff0 AccelerateObjectY
+01:4ff6 AccelerateObjectX
 01:4ffc GetObjectYVelocity
+01:5003 GetObjectXVelocity
 01:500a ResetObjectYVelocity
 01:500d SetObjectYVelocity
+01:5014 ResetObjectXVelocity
+01:5017 SetObjectXVelocity
 01:501e GetObjectYPosition
 01:5025 SetObjectYPosition
+01:502c GetObjectXPosition
+01:5033 SetObjectXPosition
 01:5056 DestroyOffscreenObject
 01:5063 DestroyOffscreenObject@DestroyAndReturn
 01:50df ObjectPointerTable
@@ -372,6 +534,7 @@
 01:5d8a ExtraLifeHandler@StateJumpTable
 01:5d92 ExtraLifeHandler@SpawnObject
 01:5d98 StarHandler; Extends the health bar (stages 2 and 5).
+01:5da1 StarHandler@StateJumpTable
 01:5f76 CookiePlatf1Handler
 01:5f96 CookiePlatf2Handler
 01:5ff0 StonePlatfHandler
@@ -383,6 +546,8 @@
 01:6206 PendChainHandler
 01:6385 ModeEnterHub
 01:6420 ModeInHub
+01:644f HubFloorSetupPointers
+01:645b ModeInHub@FloorHandlerPointers
 01:6467 DrawOpeningGate
 01:648e DrawOpeningGate@DrawAnimationFrame
 01:64a2 DrawExplodingDoor
@@ -390,6 +555,27 @@
 01:64c6 DrawExplodingDoor@DrawAnimationFrame
 01:64d5 DrawRainbow
 01:64ee DrawRainbow@DrawAnimationFrame
+01:651c HubEntranceSetup
+01:6531 HubEntranceHandler
+01:653a HubEntranceHandler@StatePointers
+01:6542 HubEntranceHandler@WalkToMan
+01:6566 HubEntranceHandler@TalkToMan
+01:6580 HubEntranceHandler@OpenGate
+01:658e HubEntranceHandler@WalkToGate
+01:65a4 HubEntranceHandler@TransferToFloor1
+01:65c3 HubFloor1Setup
+01:6633 HubFloor1Handler
+01:663c HubFloor1Handler@StatePointers
+01:6642 HubFloor1Handler@NormalState
+01:6648 DrawHubLadder
+01:667f HubFloor1Handler@LadderAppearedState
+01:66b6 HubFloor1Handler@ReachedFloor2State
+01:67a3 HubFloor2Setup
+01:6842 HubFloor2Handler
+01:684b HubFloor2Handler@StatePointers
+01:684f HubFloor2Handler@NormalState
+01:6858 HubFloor2Handler@LadderAppearedState
+01:6884 RemoveHubLadder
 01:6bc8 ResetRemovedObjects; Clears bits used for keeping track of opened chests and such.
 01:6ce7 AnimateObject
 01:6d92 InGameClock
@@ -414,6 +600,7 @@
 01:7007 LoadStatusFromRAM@CopyToVRAM
 01:701b DisplayFinalScore
 01:703d DisplayContinuesLeft
+01:7263 HitBoxTable;TODO:confirm
 01:72c3 GetBGCollisionForObject
 01:7333 GetBGCollisionForObject@CheckObjectOnScreen
 01:733a GetBGCollisionForObject@Return
@@ -427,7 +614,7 @@
 04:3b74 Stage4ThrowBlockPatterns
 04:3c5d Stage5ThrowBlockPatterns
 04:3ca7 Stage6ThrowBlockPatterns
-05:2a8d IntroTextPalette
+05:2a8d StoryPalette
 05:a7c9 HealthBarSizeTable
 05:a7d5 HealthBarTileDataPointerTable
 05:a8dd MessageFrameNametableData
@@ -435,7 +622,8 @@
 06:803a CopyrightTileData2
 06:8074 CopyrightTileData3
 06:80ae CopyrightTileData4
-06:a78a CopyrightPattern
+06:86c0 StoryImagePatterns
+06:a78a CopyrightSignPattern
 06:aa8d Unknown_palette; loaded at reset but immediately overwritten
 06:ba7d MsgPointerTable
 07:8af1 TreeGfxPointers
@@ -473,9 +661,22 @@
 0b:b639 StatusDisplayTileData
 0b:b8b5 SelectArrowTileData
 0b:b749 LowPriorityDigitTileData
+0c:a440 HubDungeonBGPalette
+0c:a450 HubCastleBGPalette
+0c:a460 HubBGPatterns
 0d:a063 WingsTilePointerTable
 0d:a06b DragonTilePointerTable
 0d:a0a3 DragonDeathTilePointerTable
+0d:a2e9 HubPracticeSpritePalette
+0d:a2f9 HubNormalSpritePalette
+0d:a309 HubNametableData
+0d:a423 HubEntranceNametableIndices
+0d:a4b3 HubFloor1NametableIndices
+0d:a54d HubFloor2NametableIndices
+0d:a648 HubDungeonNametableIndices
+0d:a6ed HubDoorVRAMOffsetTable
+0d:ab43 ClearedHubDoorTileData
+0d:b8bf HubRoofNametableIndices
 0d:a6e3 GateTilePointerTable
 0d:a6f3 DoorExplodeTilePointerTable
 0d:b946 RainbowTilePointerTable
@@ -486,11 +687,11 @@
 0e:801f TurnObjectAround
 0e:8022 FlipObjectXVelocity
 0e:802b FlipObjectDirection
-0e:8037 AccelerateObjectY_2
-0e:8047 AccelerateObjectY_2@SetVelocity
+0e:8037 AccelerateObjectYLimit_2
+0e:8047 AccelerateObjectYLimit_2@SetVelocity
 0e:804a HaltObjectY_2
-0e:805f SetObjectDirectionTowardsMickey
-0e:806a SetObjectDirectionTowardsMickey@SetDirection
+0e:805f SetObjectDirectionTowardsMickey2
+0e:806a SetObjectDirectionTowardsMickey2@SetDirection
 0e:809a GetObjectYVelocity_2
 0e:80a1 GetObjectXVelocity_2
 0e:80a8 ResetObjectYVelocity_2
@@ -504,8 +705,8 @@
 0e:8110 SetObjectOnSlopeDefaultVelocity
 0e:8116 SetObjectOnSlopeVelocity
 0e:8137 SetObjectOnSlopeVelocity@RightUpSlope
-0e:8148 NegateDE
-0e:814f NegateHL
+0e:8148 NegateDE_2
+0e:814f NegateHL_2
 0e:8185 DestroyObject_2
 0e:81cd KillEnemyScore10
 0e:81d5 KillEnemyScore20
@@ -628,6 +829,7 @@
 0e:bb5e GemHoverHandler
 0e:bdd5 Donut1Handler
 0e:bcb6 OldManHandler
+0e:bda2 DizzyStarsHandler
 0e:be68 Donut2Handler
 0f:b1b7 PendulumTilePointerTable
 
