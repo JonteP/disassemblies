@@ -76,13 +76,22 @@
 0000:c0e0 RAM_MickeyGroundCollPnt3
 0000:c0e2 RAM_MickeyGroundCollPnt4
 0000:c0e4 RAM_MickeyGroundCollPnt5
+0000:c0ec RAM_MickeyRightCollPnt1
+0000:c0ee RAM_MickeyRightCollPnt2
+0000:c0f0 RAM_MickeyRightCollPnt3
+0000:c0f2 RAM_MickeyLeftCollPnt1
+0000:c0f4 RAM_MickeyLeftCollPnt2
+0000:c0f6 RAM_MickeyLeftCollPnt3
 0000:C100 RAM_Difficulty
 0000:C109 RAM_HitObjectXPosition ;(used for throwing Mickey when hit)
 0000:C10E RAM_BGBlockDest1
 0000:C110 RAM_BGBlockToChange1
 0000:c116 RAM_InteractObjectPointer
 0000:c11b RAM_CatapultObjectPointer
-0000:c122 RAM_MickeyGroundCollRange;bits 0-4 represent "columns" of Mickey
+0000:c122 RAM_MickeyGroundCollBits;bits 0-4 represent "columns" of Mickey
+0000:c123 RAM_MickeyWallCollBits; b0 = left, b1 = right
+0000:c128 RAM_FacingStackedBlocks; bool (checks whether block to be picked up is below other blocks)
+0000:c12a RAM_MickeyLadderCollBits; b7-3 represent columns of Mickey, b2-0 is set when climbing.
 0000:C139 RAM_ButtAttack ;(only when targeting object)
 0000:c150 RAM_BGBlockRAMDest2
 0000:C152 RAM_BGBlockSource2
@@ -120,7 +129,7 @@
 0000:C210 RAM_MickeyXVelocityLow
 0000:C211 RAM_MickeyXVelocityHigh
 0000:c222 RAM_MickeyAction ;b0:in air, b1:duck, b2:carry, b3:climb, b4:??, b5:swim, b6:get hit, b7:die
-;0000:c223 ?? b0:standing on sprite
+;0000:c223 ?? b0:standing on sprite; b1:collide with edge of ceiling
 0000:C224 RAM_MickeyIsHit
 ;0000:c229 ?? Mickey is interacting with object/item?
 0000:c22c RAM_MickeyOnCatapultObject
@@ -161,6 +170,10 @@
 0000:DD09 RAM_SoundTimerHigh
 0000:DD0a RAM_SoundTimerLow
 0000:dd0b RAM_SoundTimerReload
+0000:dd40 RAM_Square0Offset
+0000:dd70 RAM_Square1Offset
+0000:dda0 RAM_Square2Offset
+0000:ddd0 RAM_NoiseOffset
 
 ;Mapper ports:
 0000:fffc Mapper_Control
@@ -367,9 +380,6 @@
 00:282d InitMickeyObject
 00:2935 MickeyStandingOnObject
 00:29af MickeyOnCatapultObject
-00:2c22 ResetMickeyXVelocity
-00:2f74 ResetMickeyYVelocity
-00:2f7b SetMickeyStateGraphics
 00:2a60 MickeyTippingHandler
 00:2a83 MickeyStandingHandler
 00:2ab4 MickeyWalkingHandler
@@ -377,6 +387,8 @@
 00:2b75 MickeyBrakingLandingHandler
 00:2bb9 MickeyJumpingHandler
 00:2bd8 MickeyFallingHandler
+00:2c0a DecelerateMickeyX
+00:2c22 ResetMickeyXVelocity
 00:2c29 MickeyButtingHandler
 00:2c6e MickeySlidingHandler
 00:2cb7 MickeySittingHandler
@@ -384,6 +396,10 @@
 00:2d83 MickeyEnteringLadderHandler
 00:2d9a MickeyLeavingLadderHandler
 00:2dad MickeySwimmingHandler
+00:2e01 MickeyStandingInFluidHandler
+00:2e1f MickeyWalkingInFluidHandler
+00:2e5f MickeyBrakingInFluidHandler
+00:2e95 MickeyDuckingInFluidHandler
 00:2ebf MickeyIsHitHandler
 00:2ecb MickeyKnockedBackHandler
 00:2f04 MickeyDyingHandler
@@ -391,8 +407,11 @@
 00:2f1f MickeyGameOverFallingHandler
 00:2f27 MickeyGameOverLandingHandler
 00:2f2e MickeySeeingStarsHandler
+00:2f74 ResetMickeyYVelocity
+00:2f7b SetMickeyStateGraphics
 00:2f98 MickeyPickingHandler
 00:2fbb MickeyLiftingHandler
+00:2fc7 MickeyLiftingHeavyHandler
 00:2fd3 MickeyCarryingHandler
 00:2ff1 MickeyCarryWalkingHandler
 00:3016 MickeyCarryBrakingHandler
@@ -400,6 +419,14 @@
 00:306e MickeyCarryFallingHandler
 00:3084 MickeyThrowingHandler
 00:30a7 MickeyJumpThrowingHandler
+00:30ba MickeyPickingInFluidHandler
+00:30d8 MickeyLiftingInFluidHandler
+00:30e4 MickeyLiftingHeavyInFluidHandler
+00:30f0 MickeyCarryingInFluidHandler
+00:3108 MickeyCarryWalkingInFluidHandler
+00:3124 MickeyCarryBrakingInFluidHandler
+00:3149 MickeyCarryJumpingInFluidHandler
+00:316a MickeyCarryFallingInFluidHandler;Could not find a test case for this.
 00:32bd MickeyStateGfxTable
 00:34db MickeyStateJumpTable
 00:3563 SetMickeyStandingState
@@ -409,6 +436,7 @@
 00:35d6 SetMickeyLandingState
 00:35e8 SetMickeySittingState
 00:36b3 SetMickeyCarryingState
+00:36dd SetMickeyCarryFallingState
 00:3717 SetMickeyThrowingState
 00:3725 SetMickeyTippingState
 00:3740 SetMickeyEnteringLadderState
@@ -434,8 +462,9 @@
 00:3960 SetMickeyDuckingDownLeftState
 00:3993 SetMickeyWalkingUpRightState
 00:399d SetMickeyWalkingDownLeftState
-00:3b4a MickeyStandingSlopeHandler
-00:3b5a MickeyCarryingSlopeHandler
+00:3a8f CheckMickeyDuckingOverLadder
+00:3b4a MickeyStandingOnSlopeHandler
+00:3b5a MickeyCarryingOnSlopeHandler
 00:3b6a MickeyDuckingUpRightHandler
 00:3b71 MickeyDuckingDownLeftHandler
 00:3b78 MickeyDuckingUpLeftHandler
@@ -448,28 +477,42 @@
 00:3c4c MickeyWalkingUpLeftHandler
 00:3c72 MickeyCarryWalkingDownRightHandler
 00:3c8a MickeyWalkingDownRightHandler
+00:3cb0 CheckMickeyDecelerateToStop
+00:4141 NoCollisionToHandle_1
+00:419c SetMickeyFluidCollisionDownLeft
+00:41a2 SetMickeyFluidCollisionDownCenter
+00:41a8 SetMickeyFluidCollisionDownRight
+01:41c0 SetMickeyLadderCollisionLeft
+01:41c9 SetMickeyLadderCollisionLeftCenter
+01:41d2 SetMickeyLadderCollisionCenter
+01:41db SetMickeyLadderCollisionRightCenter
+01:41e4 SetMickeyLadderCollisionRight
 01:42ba SetMickeyGroundCollisionLeft
 01:42c0 SetMickeyGroundCollisionLeftCenter
 01:42c6 SetMickeyGroundCollisionCenter
 01:42cc SetMickeyGroundCollisionRightCenter
 01:42d2 SetMickeyGroundCollisionRight
+01:4409 NoCollisionToHandle_2
+01:4416 CollideWithWall
 01:44ae GetMickeyGroundNametableAttrYOffset
 01:44e8 GetNametableAttributeYOffset
 01:44f6 GetCollisionBits
-01:4503 GetMickeyGroundNametableAttrLeftCenter
-01:4507 GetMickeyGroundNametableAttrLeft
-01:4523 GetMickeyGroundNametableAttrRightCenter
-01:4527 GetMickeyGroundNametableAttrRight
-01:4541 GetMickeyGroundNametableAttrCenter
+01:4503 GetMickeyLeftCenterXPosition;Correspond to second "column" of Mickey.
+01:4507 GetMickeyLeftXPosition;Correspond to first "column" of Mickey.
+01:450b GetXPositionLeftOfMickey;Correspond to tile left of Mickey.
+01:4523 GetMickeyRightCenterXPosition;Correspond to fourth "column" of Mickey.
+01:4527 GetMickeyRightXPosition;Correspond to fifth "column" of Mickey.
+01:452b GetXPositionRightOfMickey;Correspond to tile right of Mickey.
+01:4541 GetMickeyCenterXPosition;Correspond to third "column" of Mickey.
 01:49ef MickeyPatternToVRAM
 01:4a04 CopyToVRAM_640
 01:4e04 CopyToVRAM_128
 01:4e84 CopyToVRAM_64
 01:4ec4 CopyToVRAM_32
-01:4f05 _LABEL_4F05_
-01:4f15 _LABEL_4F05_@LoadObject
-01:4f47 _LABEL_4F05_@NextObject
-01:4f58 _LABEL_4F05_@CallObjectHandler
+01:4f05 HandleObjectsInRAM
+01:4f15 HandleObjectsInRAM@LoadObject
+01:4f47 HandleObjectsInRAM@NextObject
+01:4f58 HandleObjectsInRAM@CallObjectHandler
 01:4f62 SetObjectStatic
 01:4f64 SetObjectAnimated
 01:4f6a UpdateObjectAnimation
@@ -509,6 +552,11 @@
 01:5945 ToyPlatf1Handler; Moving platforms, stage 2.
 01:5988 ToyPlatf2Handler; Blocks that fall when stepping on, stage 2.
 01:5a0f TrainSmokeHandler; Smoke from train chimney that you can ride, stage 2.
+01:5b6e BlockExplosionHandler; Explosion when breaking blocks.
+01:5b77 BlockExplosionHandler@StateJumpTable
+01:5b7b SpawnExplosionObject
+01:5b98 ChestExplosionHandler; Explosion when breaking chests.
+01:5ba1 ChestExplosionHandler@StateJumpTable
 01:5bd3 BigCoinHandler; Chest item.
 01:5bf3 BigCoinHandler@StateJumpTable
 01:5bfb BigCoinHandler@SpawnObject
@@ -607,6 +655,86 @@
 02:815f SetSoundEngineSilent
 02:8386 ResetSound
 02:8396 ResetSoundCommands; Tones = 0, Volume = full attenuation
+02:8a14 IntroMusicSquare0Data
+02:8b1b IntroMusicSquare1Data
+02:8c57 IntroMusicSquare2Data
+02:8d35 IntroMusicNoiseData
+02:8daa Stage1MusicSquare0Data
+02:8e29 Stage1MusicSquare1Data
+02:8e88 Stage1MusicSquare2Data
+02:8ef4 Stage1MusicNoiseData
+02:8f7a Stage2MusicSquare0Data
+02:9074 Stage2MusicSquare1Data
+02:90d9 Stage2MusicSquare2Data
+02:91d1 Stage2MusicNoiseData
+02:92c2 Stage3MusicSquare0Data
+02:935e Stage3MusicSquare1Data
+02:9402 Stage3MusicSquare2Data
+02:949a Stage3MusicNoiseData
+02:9535 Stage4MusicSquare0Data
+02:960d Stage4MusicSquare1Data
+02:96b1 Stage4MusicSquare2Data
+02:9730 Stage4MusicNoiseData
+02:9756 HubMusicSquare0Data
+02:97a8 HubMusicSquare1Data
+02:97e9 HubMusicSquare2Data
+02:981d HubMusicNoiseData
+02:9843 Stage5MusicSquare0Data
+02:98bb Stage5MusicSquare1Data
+02:992e Stage5MusicSquare2Data
+02:99c1 Stage5MusicNoiseData
+02:99e7 Stage6AMusicSquare0Data
+02:9a15 Stage6AMusicSquare1Data
+02:9a48 Stage6AMusicSquare2Data
+02:9a7b Stage6AMusicNoiseData
+02:9aa1 EndingMusicSquare0Data
+02:9bee EndingMusicSquare1Data
+02:9d4f EndingMusicSquare2Data
+02:9ea1 EndingMusicNoiseData
+02:9f13 BossMusicChannels
+02:9f14 BossMusicSquare0Settings
+02:9f1d BossMusicSquare1Settings
+02:9f26 BossMusicSquare2Settings
+02:9f2f BossMusicNoiseSettings
+02:9f38 BossMusicSquare0Data
+02:9fbd BossMusicSquare1Data
+02:a01f BossMusicSquare2Data
+02:a0b7 BossMusicNoiseData
+02:a177 DragonMusicSquare0Data
+02:a1d6 DragonMusicSquare1Data
+02:a244 DragonMusicSquare2Data
+02:a2b8 DragonMusicNoiseData
+02:a326 GameOverMusicSquare0Data
+02:a392 GameOverMusicSquare1Data
+02:a3b3 GameOverMusicSquare2Data
+02:a3d5 GameOverMusicNoiseData
+02:a3fb StageClearMusicSquare0Data
+02:a41d StageClearMusicSquare1Data
+02:a450 StageClearMusicSquare2Data
+02:a460 StageClearMusicNoiseData
+02:a486 CastleRoofMusicSquare0Data
+02:a4aa CastleRoofMusicSquare1Data
+02:a4c7 CastleRoofMusicSquare2Data
+02:a4ff CastleRoofMusicNoiseData
+02:a525 DeathMusicSquare0Data
+02:a542 DeathMusicSquare1Data
+02:a55a DeathMusicSquare2Data
+02:a577 DeathMusicNoiseData
+02:a5b5 Stage6BMusicSquare0Data
+02:a5d0 Stage6BMusicSquare1Data
+02:a5e3 Stage6BMusicSquare2Data
+02:a5ee Stage6BMusicNoiseData
+02:a61f WinGameMusicSquare0Data
+02:a641 WinGameMusicSquare1Data
+02:a663 WinGameMusicSquare2Data
+02:a699 WinGameMusicNoiseData
+02:a6bf CoffeeCupMusicSquare0Data
+02:a733 CoffeeCupMusicSquare1Data
+02:a769 CoffeeCupMusicSquare2Data
+02:a7da CoffeeCupMusicNoiseData
+02:a7db JumpSFXChannels
+02:a7dc JumpSFXSettings
+02:a7e5 JumpSFXData
 04:34e0 GenericItemPatterns
 04:38c4 Stage1ThrowBlockPatterns
 04:39a5 Stage2ThrowBlockPatterns
