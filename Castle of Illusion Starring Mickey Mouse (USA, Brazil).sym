@@ -30,8 +30,14 @@
 0000:C060 RAM_GameMode
 0000:C061 RAM_IRQMode
 0000:C062 RAM_SetPauseFlag
+0000:c067 RAM_SpriteAttrYOffset
+0000:c069 RAM_SpriteAttrXOffset
 0000:C06D RAM_CurrentStage
-0000:c06f RAM_StageXPosition
+0000:c06f RAM_StageXPositionLow
+0000:c070 RAM_StageXPositionMid
+0000:c071 RAM_StageXPositionHigh
+0000:c072 RAM_XScrollValueLow
+0000:c073 RAM_XScrollValueHigh
 0000:c075 RAM_RightBoundary
 0000:c076 RAM_LeftBoundary
 0000:C07C RAM_ScrollNametable
@@ -70,6 +76,7 @@
 0000:C0C6 RAM_ContinuesLeft
 0000:C0C7 RAM_DrawLifeCounter
 0000:C0C8 RAM_LivesLeft
+0000:c0ce RAM_StageBeingCleared
 0000:C0CF RAM_InhibitPause
 0000:c0dc RAM_MickeyGroundCollPnt1;pointer to jump table for setting collision bit 0 in c122
 0000:c0de RAM_MickeyGroundCollPnt2
@@ -92,6 +99,7 @@
 0000:c123 RAM_MickeyWallCollBits; b0 = left, b1 = right
 0000:c128 RAM_FacingStackedBlocks; bool (checks whether block to be picked up is below other blocks)
 0000:c12a RAM_MickeyLadderCollBits; b7-3 represent columns of Mickey, b2-0 is set when climbing.
+0000:c130 RAM_MickeyAcidCollision
 0000:C139 RAM_ButtAttack ;(only when targeting object)
 0000:c150 RAM_BGBlockRAMDest2
 0000:C152 RAM_BGBlockSource2
@@ -119,6 +127,10 @@
 0000:C197 RAM_AnimateBG
 0000:C19A RAM_AnimatedBGTilePos
 0000:C200 RAM_MickeyState
+0000:c202 RAM_MickeyGfxTablePointerLow
+0000:c203 RAM_MickeyGfxTablePointerHigh
+0000:c204 RAM_MickeyAnimationFrames
+0000:c205 RAM_MickeyCurrentFrame
 0000:c209 RAM_MickeyDirection
 0000:C20A RAM_MickeyYPositionLow
 0000:C20B RAM_MickeyYPositionHigh
@@ -131,6 +143,8 @@
 0000:c222 RAM_MickeyAction ;b0:in air, b1:duck, b2:carry, b3:climb, b4:??, b5:swim, b6:get hit, b7:die
 ;0000:c223 ?? b0:standing on sprite; b1:collide with edge of ceiling
 0000:C224 RAM_MickeyIsHit
+0000:c226 RAM_MickeyIsInvincible
+0000:c227 RAM_MickeyInvincibilityCounter
 ;0000:c229 ?? Mickey is interacting with object/item?
 0000:c22c RAM_MickeyOnCatapultObject
 0000:C300 RAM_ObjectOffset; or is it from c260?
@@ -165,11 +179,14 @@
 0000:DC32 RAM_IntroEventIndex
 0000:DC34 RAM_IntroEventCounterLow
 0000:DC35 RAM_IntroEventCounterHigh
+0000:dd02 RAM_GlobalTempo
+0000:dd03 RAM_SetSound
 0000:DD04 RAM_SoundSelect
 0000:DD08 RAM_AudioPaused
 0000:DD09 RAM_SoundTimerHigh
 0000:DD0a RAM_SoundTimerLow
 0000:dd0b RAM_SoundTimerReload
+0000:dd0f RAM_SoundPriority;?
 0000:dd40 RAM_Square0Offset
 0000:dd70 RAM_Square1Offset
 0000:dda0 RAM_Square2Offset
@@ -228,8 +245,9 @@
 00:050e ClearObjectRAM; TODO: confirm
 00:051c ClearRAM
 00:0524 ClearRAMFlags
-00:053e ResetYScroll
-00:0547 ResetXScroll
+00:0531 ResetStageXPositionSizeAndScroll;Effectively turn into one-screen stage.
+00:053e ResetYScrollRegister
+00:0547 ResetXScrollRegister
 00:0550 SetBackdropColor2
 00:0555 SetBackdropColor0
 00:055e SetVDPControl
@@ -299,6 +317,7 @@
 00:11e7 ModeEnterStage
 00:12ce DrawStatusTemplate
 00:12e8 FillHealthBar
+00:12f3 SetInitialNumberOfLives
 00:12fa SetDisplayScoreFlag
 00:1300 ModeInStage
 00:13ef SetEndingSequence
@@ -306,7 +325,9 @@
 00:1496 MickeyDies@NoLivesLeft
 00:149c Pause256Frames
 00:14a0 Pause128Frames
-00:14d2 ClearSpriteRAM
+00:14bf ResetSpriteAttributeTablePointers
+00:14cc SetEndOfSpriteAttributeTable
+00:14d2 ClearSpriteAttributeTable
 00:14d8 CopyNametableToVRAM
 00:14ee LoadStageSpritePalette
 00:14fe GetStageGfxPointers
@@ -319,16 +340,29 @@
 00:167d SpritePalette4
 00:168d SpritePalette5
 00:16ad StageGraphicsPointerTable
-00:1844 ScrollOneColumn
-00:185e ScrollOneColumn@TileToVRAM
+;00:1711 Seems to create nametable buffer based on X start offset?
+00:1740 ScrollScreenHorizontally
+00:17a5 ScrollScreenHorizontally@ResetScroll
+00:1844 ScrollNametableOneColumn
+00:185e ScrollNametableOneColumn@TileToVRAM
 00:1872 ModeHubFloorTransition
+00:191b LoadFloorNametableIndices
 00:1987 ModeFloorTransition
+00:1d01 NametableIndexPointersJumpTable
+00:1d17 Stage1NametableIndexPointers
+00:1d1f Stage2NametableIndexPointers
+00:1d27 Stage3NametableIndexPointers
+00:1d33 Stage4NametableIndexPointers
+00:1d41 Stage5NametableIndexPointers
+00:1d4b Stage6NametableIndexPointers
 00:1d67 HubNametableIndexPointers
 00:1d75 ModeEnterWitch1;TODO:figure out
 00:1dc5 ModeEnterWitch2;TODO:figure out
+00:1e03 SetToOneScreenRoom
 00:1e62 ModeEnterDoor; TODO: used outside stage 6?
 00:1e7e ModeReenterStage
 00:1ebc ClearMickeyObject
+00:1ec9 ModeTransitionToBoss; Used in stage 4 and 5 only.
 00:1f4e FadeMusic
 00:1f5c ModeEnterTheDragon
 00:1f9e LoadEntryPosition
@@ -427,6 +461,8 @@
 00:3124 MickeyCarryBrakingInFluidHandler
 00:3149 MickeyCarryJumpingInFluidHandler
 00:316a MickeyCarryFallingInFluidHandler;Could not find a test case for this.
+00:3179 MickeyThrowingInFluidHandler
+00:3199 MickeyJumpThrowingInFluidHandler
 00:32bd MickeyStateGfxTable
 00:34db MickeyStateJumpTable
 00:3563 SetMickeyStandingState
@@ -437,6 +473,9 @@
 00:35e8 SetMickeySittingState
 00:36b3 SetMickeyCarryingState
 00:36dd SetMickeyCarryFallingState
+00:36e7 SetMickeyThrowingState
+00:36ed SetMickeyJumpThrowingState
+00:36f1 MickeyIsThrowing
 00:3717 SetMickeyThrowingState
 00:3725 SetMickeyTippingState
 00:3740 SetMickeyEnteringLadderState
@@ -453,16 +492,52 @@
 00:37d7 SetMickeyCarryWalkingInFluidState
 00:37de SetMickeyCarryBrakingInFluidState
 00:37e5 SetMickeyCarryJumpingInFluidState
-00:37fa SetMickeyThrowingInFluidState; TODO:double check
-00:3800 SetMickeyJumpThrowingInFluidState; TODO:double check
-00:3888 SetMickeyIsHitState
+00:37fa SetMickeyThrowingInFluidState
+00:3800 SetMickeyJumpThrowingInFluidState
+00:3807 SwitchToThrowingInFluidState; Going from jump-throwing
+00:380e SwitchToJumpThrowingInFluidState; Going from throwing
+00:3815 SetMickeyIsHitState
+00:383e SetMickeyThrownBackState
+00:385a CheckThrowBackEnvironment
+00:3860 ThrowBackInAir
+00:3869 ThrowBackInWater
+00:3870 SetThrowBackYVelocity
+00:3874 ThrowBackMickeyFromEnemy
+00:3888 SetMickeyIsDyingState
 00:38ae SetMickeyDropDeadState
+00:38ba SetMickeyGameOverFallingState
+00:38c9 SetMickeyGameOverLandingState
 00:38db SetMickeySeeingStarsState
+00:38e7 SetMickeyStandingRightSlopeState
+00:38f7 SetMickeyStandingRightSlopeState@FacingLeft
+00:3901 SetMickeyStandingLeftSlopeState
+00:3911 SetMickeyStandingLeftSlopeState@FacingLeft
+00:391b SetMickeyCarryingRightSlopeState
+00:392b SetMickeyCarryingRightSlopeState@FacingLeft
+00:3935 SetMickeyCarryingLeftSlopeState
+00:3945 SetMickeyCarryingLeftSlopeState@FacingLeft
+00:394d CallSetMickeyStateGraphics
+00:3950 SetMickeyDuckingRightSlopeState 
 00:3956 SetMickeyDuckingUpRightState
 00:3960 SetMickeyDuckingDownLeftState
+00:396a SetMickeyDuckingLeftSlopeState 
+00:3970 SetMickeyDuckingDownRightState
+00:397a SetMickeyDuckingUpLeftState
+00:3984 SetMickeyWalkingRightSlopeState
 00:3993 SetMickeyWalkingUpRightState
 00:399d SetMickeyWalkingDownLeftState
+00:39a7 SetMickeyWalkingLeftSlopeState
+00:39b6 SetMickeyWalkingDownRightState
+00:39c0 SetMickeyWalkingUpLeftState
+00:39ca SetMickeyCarryWalkingRightSlopeState
+00:39d9 SetMickeyCarryWalkingUpRightState
+00:39e4 SetMickeyCarryWalkingDownLeftState
+00:39ef SetMickeyCarryWalkingLeftSlopeState
+00:39fe SetMickeyCarryWalkingDownRightState
+00:3a09 SetMickeyCarryWalkingUpLeftState
 00:3a8f CheckMickeyDuckingOverLadder
+00:3aeb CheckMickeyIsHit
+00:3b0d CheckMickeyIsHit@InvincibilityCountdown
 00:3b4a MickeyStandingOnSlopeHandler
 00:3b5a MickeyCarryingOnSlopeHandler
 00:3b6a MickeyDuckingUpRightHandler
@@ -487,6 +562,7 @@
 01:41d2 SetMickeyLadderCollisionCenter
 01:41db SetMickeyLadderCollisionRightCenter
 01:41e4 SetMickeyLadderCollisionRight
+01:42b2 SetMickeyAcidCollision
 01:42ba SetMickeyGroundCollisionLeft
 01:42c0 SetMickeyGroundCollisionLeftCenter
 01:42c6 SetMickeyGroundCollisionCenter
@@ -603,6 +679,8 @@
 01:64c6 DrawExplodingDoor@DrawAnimationFrame
 01:64d5 DrawRainbow
 01:64ee DrawRainbow@DrawAnimationFrame
+01:64fb GetHubEntranceMickeyXPosition
+01:6513 HubEntranceMickeyXPositionTable
 01:651c HubEntranceSetup
 01:6531 HubEntranceHandler
 01:653a HubEntranceHandler@StatePointers
@@ -624,8 +702,18 @@
 01:684f HubFloor2Handler@NormalState
 01:6858 HubFloor2Handler@LadderAppearedState
 01:6884 RemoveHubLadder
+01:6a87 LoadCurrentStageBoss
+01:6a90 BossLoaderJumpTable
+01:6aa4 LoadBoss1
+01:6ab8 NoBossToLoad
+01:6ab9 LoadBoss2
+01:6ace LoadBoss3
+01:6af7 LoadBoss4
+01:6b3c LoadBoss5
+01:6b51 LoadFinalBoss
 01:6bc8 ResetRemovedObjects; Clears bits used for keeping track of opened chests and such.
 01:6ce7 AnimateObject
+01:6d00 LoadObjectSpriteAttributes
 01:6d92 InGameClock
 01:6dbf InGameClock@ReloadClockTimer
 01:6dda InGameClock@FastCountdown
@@ -652,9 +740,20 @@
 01:72c3 GetBGCollisionForObject
 01:7333 GetBGCollisionForObject@CheckObjectOnScreen
 01:733a GetBGCollisionForObject@Return
-02:815f SetSoundEngineSilent
+02:8082 SetSound
+02:80ea LoadSound
+02:8108 SoundControlJumpTable
+02:8110 FadeSound
+02:8120 ClearSfx
+02:8137 EmptySoundData
+02:8138 LoadMusic
+02:815f SetSoundSilent
+02:8165 LoadSfx
+02:8373 ClearSound
 02:8386 ResetSound
 02:8396 ResetSoundCommands; Tones = 0, Volume = full attenuation
+02:83a8 GetPointerFromTable_Alt
+02:844b SoundChannelHandler
 02:8a14 IntroMusicSquare0Data
 02:8b1b IntroMusicSquare1Data
 02:8c57 IntroMusicSquare2Data
@@ -774,19 +873,49 @@
 08:8000 Stage1BGPalette
 08:8010 Stage1BGPatterns
 08:8b70 Stage1NametableData
-08:9679 Stage1NametableIndices
+08:8d23 Stage1Floor0NametableIndices
+08:8fd2 Stage1Floor1NametableIndices
+08:9313 Stage1Floor2NametableIndices
+08:9679 Stage1Floor3NametableIndices
 08:bc2b MickeyLeftPatterns
 09:8000 Stage2BGPalette
 09:8010 Stage2BGPatterns
 09:8943 Stage2NametableData
-09:8b83 Stage2NametableIndices
+09:8b83 Stage2Floor0NametableIndices
+09:8fda Stage2Floor1NametableIndices
+09:951b Stage2Floor2NametableIndices
+09:9991 Stage2Floor3NametableIndices
 0a:8000 Stage3BGPalette
 0a:8010 Stage3BGPatterns
 0a:8959 Stage3NametableData
-0a:9223 Stage3NametableIndices
-0b:3311 CharPatterns
+0a:8b79 Stage3BossNametableIndices
+0a:8bc1 Stage3Floor1NametableIndices
+0a:8d58 Stage3Floor2NametableIndices
+0a:8f1c Stage3Floor3NametableIndices
+0a:90a9 Stage3Floor4NametableIndices
+0a:9223 Stage3Floor5NametableIndices
+0b:8aba Stage4Floor0NametableIndices
+0b:8d07 Stage4Floor1NametableIndices
+0b:8f74 Stage4Floor2NametableIndices
+0b:91f7 Stage4Floor3NametableIndices
+0b:949f Stage4Floor4NametableIndices
+0b:96ae Stage4Floor5NametableIndices
+0b:996b Stage4CoffeeCupNametableIndices
+0b:a174 Stage4BossNametableData
+0b:a189 Stage4BossNametableIndices
+0b:a243 Stage5NametableData
+0b:a539 Stage5Floor0NametableIndices
+0b:a71a Stage5Floor1NametableIndices
+0b:a9df Stage5Floor2NametableIndices
+0b:acc0 Stage5Floor3NametableIndices
+0b:ae89 Stage4CoffeeCupNametableData
+0b:aeab Stage5ThreadedBarsNametableData
+0b:af82 Stage5Floor4NametableIndices
+0b:b2fe ArrowPattern;??
+0b:b311 CharPatterns
 0b:b625 HighPriorityDigitTileData
 0b:b639 StatusDisplayTileData
+0b:b83d GameOverTextTileData
 0b:b8b5 SelectArrowTileData
 0b:b749 LowPriorityDigitTileData
 0c:a440 HubDungeonBGPalette
