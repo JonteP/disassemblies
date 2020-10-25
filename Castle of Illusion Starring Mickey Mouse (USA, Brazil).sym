@@ -93,8 +93,11 @@
 0000:C109 RAM_HitObjectXPosition ;(used for throwing Mickey when hit)
 0000:C10E RAM_BGBlockDest1
 0000:C110 RAM_BGBlockToChange1
+0000:c112 RAM_MickeyCoarseY
+0000:c114 RAM_MickeyCoarseX
 0000:c116 RAM_InteractObjectPointer
-0000:c11b RAM_CatapultObjectPointer
+0000:c119 RAM_CarryObjectPointer
+0000:c11b RAM_PlatformObjectPointer
 0000:c122 RAM_MickeyGroundCollBits;bits 0-4 represent "columns" of Mickey
 0000:c123 RAM_MickeyWallCollBits; b0 = left, b1 = right
 0000:c128 RAM_FacingStackedBlocks; bool (checks whether block to be picked up is below other blocks)
@@ -140,13 +143,14 @@
 0000:C20F RAM_MickeyYVelocityHigh
 0000:C210 RAM_MickeyXVelocityLow
 0000:C211 RAM_MickeyXVelocityHigh
+0000:c212 RAM_MickeyDeathStatus
 0000:c222 RAM_MickeyAction ;b0:in air, b1:duck, b2:carry, b3:climb, b4:??, b5:swim, b6:get hit, b7:die
 ;0000:c223 ?? b0:standing on sprite; b1:collide with edge of ceiling
 0000:C224 RAM_MickeyIsHit
 0000:c226 RAM_MickeyIsInvincible
 0000:c227 RAM_MickeyInvincibilityCounter
 ;0000:c229 ?? Mickey is interacting with object/item?
-0000:c22c RAM_MickeyOnCatapultObject
+0000:c22c RAM_MickeyOnPlatform
 0000:C300 RAM_ObjectOffset; or is it from c260?
 0000:C600 RAM_MickeyPatterns
 0000:C700 RAM_Patterns
@@ -217,6 +221,9 @@
 00:012e MainLoop
 00:0138 GameModeJumpTable
 00:016c DecodePatternsToVRAM
+00:0171 DecodePatternsToVRAM@OuterLoop;For each bitplane.
+00:017c DecodePatternsToVRAM@InnerLoop;For pattern repeat value.
+00:01a1 DecodePatternsToVRAM@NextBitplane
 00:01a7 WriteDataToVRAM
 00:01bb FillVRAM; Write HL to DE BC times.
 00:01c1 FillVRAM@Loop
@@ -310,6 +317,7 @@
 00:0d05 ModeIntro@StoryEventDataTable
 00:0d37 ModeSetTitleScreen
 00:0ded ModeInTitleScreen
+;00:0e73 Update scroll values for title screen?
 00:0f02 ModeSetEndingCutscene
 00:0f56 ModeInEndingCutscene
 00:0ffd ModeSetCredits
@@ -412,8 +420,9 @@
 00:221e HubNormalEntryPosition3
 00:262b BackgroundBlockToRAMBuffer2
 00:282d InitMickeyObject
+00:2846 SetMickeyGameOverSprite;Center Mickey and update sprite patterns.
 00:2935 MickeyStandingOnObject
-00:29af MickeyOnCatapultObject
+00:29af MickeyOnPlatformObject
 00:2a60 MickeyTippingHandler
 00:2a83 MickeyStandingHandler
 00:2ab4 MickeyWalkingHandler
@@ -463,6 +472,12 @@
 00:316a MickeyCarryFallingInFluidHandler;Could not find a test case for this.
 00:3179 MickeyThrowingInFluidHandler
 00:3199 MickeyJumpThrowingInFluidHandler
+00:31a9 CheckThrowingState
+00:31b3 CheckJumpThrowingState
+00:31bd CheckThrowingInFluidState
+00:31c7 CheckJumpThrowingInFluidState
+00:31d1 CheckIfObjectThrown
+00:31de CheckIfObjectThrown@CheckCollisionWithSolid
 00:32bd MickeyStateGfxTable
 00:34db MickeyStateJumpTable
 00:3563 SetMickeyStandingState
@@ -592,6 +607,8 @@
 01:4f62 SetObjectStatic
 01:4f64 SetObjectAnimated
 01:4f6a UpdateObjectAnimation
+01:4f78 NegateObjectYVelocity
+01:4f84 NegateObjectXVelocity
 01:4f99 AccelerateObjectYLimit
 01:4fa9 AccelerateObjectYLimit@SetVelocity
 01:4fac HaltObjectY
@@ -611,6 +628,7 @@
 01:5033 SetObjectXPosition
 01:5056 DestroyOffscreenObject
 01:5063 DestroyOffscreenObject@DestroyAndReturn
+01:5067 DestroyOffscreenObjectY
 01:50df ObjectPointerTable
 01:51e1 Boss4GenHandler; Used to generate the letters?
 01:52f9 Boss4EyeHandler
@@ -621,13 +639,34 @@
 01:56d3 _UNKNOWN_barrel
 01:579a KeyHandler
 01:57c8 LanternHandler
-01:581a LeafPlatf1Handler; Swinging leafs, stage 1.
-01:587b LeafPlatf2Handler; Leafs that fall when stepping on them, stage 1.
+01:581a LeafPlatform1Handler; Swinging leafs, stage 1.
+01:5823 LeafPlatform1Handler@StateJumpTable
+01:5827 LeafPlatform1Handler@SpawnObject;Sets initial velocity based on RAM location.
+01:5852 LoadLeafPlatformGfx
+01:5858 LeafPlatform1Handler@Swinging;Handles swing pattern and checks Mickey collision.
+01:587b LeafPlatform2Handler; Leafs that fall when stepping on them, stage 1.
+01:5884 LeafPlatform2Handler@StateJumpTable
+01:588a LeafPlatform2Handler@SpawnObject
+01:588f LeafPlatform2Handler@Suspended
+01:589d LeafPlatform2Handler@Falling
 01:58ae RollingRockHandler; Big rolling rock, stage 1.
+01:58ba RollingRockHandler@StateJumpTable
+01:58c0 RollingRockHandler@SpawnObject
+01:58cd RollingRockHandler@Rolling;Update X velocity and check collision with ground and walls.
+01:5904 RollingRockHandler@Falling;Update Y velocity and destroy when below screen.
 01:590d FallingBlockHandler; Blocks hanging from ceiling, stage 1.
 01:5945 ToyPlatf1Handler; Moving platforms, stage 2.
 01:5988 ToyPlatf2Handler; Blocks that fall when stepping on, stage 2.
 01:5a0f TrainSmokeHandler; Smoke from train chimney that you can ride, stage 2.
+01:5a9f LeafPlatformGfxPointers
+01:5aab LeafPlatformGfxPointers@Left
+01:5ab6 LeafPlatformGfxPointers@Right
+01:5ac1 LeafPlatformGfxPointers@Center
+01:5ac9 RollingRockGfxPointers
+01:5ad5 RollingRockGfxPointers@Frame0
+01:5aef RollingRockGfxPointers@Frame1
+01:5b09 RollingRockGfxPointers@Frame2
+01:5b23 _UNK_DATA_
 01:5b6e BlockExplosionHandler; Explosion when breaking blocks.
 01:5b77 BlockExplosionHandler@StateJumpTable
 01:5b7b SpawnExplosionObject
@@ -736,6 +775,13 @@
 01:7007 LoadStatusFromRAM@CopyToVRAM
 01:701b DisplayFinalScore
 01:703d DisplayContinuesLeft
+01:705f CheckMickeyObjectHitboxCollision;BC=MickeyXBox, DE=MickeyYBox
+01:7093 CheckMickeyDeadOrObjectNotVisible;Called when handling Mickey - platform/item interaction.
+01:70be MickeyCoarsePositionToRAM
+01:70eb CalculateMickeyHitBox
+01:722b MickeyPlatformCollisionHandler
+01:7247 MickeyPlatformCollisionHandler@CheckCollision
+01:725f MickeyHitBox;TODO:one of many?
 01:7263 HitBoxTable;TODO:confirm
 01:72c3 GetBGCollisionForObject
 01:7333 GetBGCollisionForObject@CheckObjectOnScreen
@@ -911,12 +957,15 @@
 0b:ae89 Stage4CoffeeCupNametableData
 0b:aeab Stage5ThreadedBarsNametableData
 0b:af82 Stage5Floor4NametableIndices
-0b:b2fe ArrowPattern;??
+0b:b2fe ArrowPattern;1bpp tile
 0b:b311 CharPatterns
 0b:b625 HighPriorityDigitTileData
 0b:b639 StatusDisplayTileData
 0b:b83d GameOverTextTileData
-0b:b8b5 SelectArrowTileData
+0b:b8b5 DifficultyArrowNametableDataJumpTable 
+0b:b8b9 PracticeArrowNametableData;Arrow - blank - blank
+0b:b8bf NormalArrowNametableData;Blank - blank - arrow
+0b:b8c5 _UNK_DATA_
 0b:b749 LowPriorityDigitTileData
 0c:a440 HubDungeonBGPalette
 0c:a450 HubCastleBGPalette
