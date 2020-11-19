@@ -134,6 +134,7 @@
 0000:c203 RAM_MickeyGfxTablePointerHigh
 0000:c204 RAM_MickeyAnimationFrames
 0000:c205 RAM_MickeyCurrentFrame
+0000:c208 RAM_MickeyHitbox;b7 is also set during butt attack?
 0000:c209 RAM_MickeyDirection
 0000:C20A RAM_MickeyYPositionLow
 0000:C20B RAM_MickeyYPositionHigh
@@ -149,9 +150,24 @@
 0000:C224 RAM_MickeyIsHit
 0000:c226 RAM_MickeyIsInvincible
 0000:c227 RAM_MickeyInvincibilityCounter
-;0000:c229 ?? Mickey is interacting with object/item?
+;0000:c229 Mickey object collision? 3=collide from below
 0000:c22c RAM_MickeyOnPlatform
-0000:C300 RAM_ObjectOffset; or is it from c260?
+0000:C300 RAM_ObjectSlot0
+0000:C320 RAM_ObjectSlot1
+0000:C340 RAM_ObjectSlot2
+0000:C360 RAM_ObjectSlot3
+0000:C380 RAM_ObjectSlot4
+0000:C3a0 RAM_ObjectSlot5
+0000:C3c0 RAM_ObjectSlot6
+0000:C3e0 RAM_ObjectSlot7
+0000:C400 RAM_ObjectSlot8
+0000:C420 RAM_ObjectSlot9
+0000:C440 RAM_ObjectSlotA
+0000:C460 RAM_ObjectSlotB
+0000:C480 RAM_ObjectSlotC
+0000:C4a0 RAM_ObjectSlotD
+0000:C4c0 RAM_ObjectSlotE
+0000:C4e0 RAM_ObjectSlotF
 0000:C600 RAM_MickeyPatterns
 0000:C700 RAM_Patterns
 0000:CA00 RAM_CompNametableIndices
@@ -614,6 +630,7 @@
 01:4fac HaltObjectY
 01:4fc1 SetObjectDirectionTowardsMickey; Only used by rolling rocks, stage 1.
 01:4fcc SetObjectDirectionTowardsMickey@SetDirection
+01:4fd0 CheckMickeyWithinXRangeOfObject;Used only for falling blocks?
 01:4ff0 AccelerateObjectY
 01:4ff6 AccelerateObjectX
 01:4ffc GetObjectYVelocity
@@ -629,16 +646,36 @@
 01:5056 DestroyOffscreenObject
 01:5063 DestroyOffscreenObject@DestroyAndReturn
 01:5067 DestroyOffscreenObjectY
+01:50b3 SetBlockExplosionObject
 01:50df ObjectPointerTable
 01:51e1 Boss4GenHandler; Used to generate the letters?
 01:52f9 Boss4EyeHandler
+01:53c0 ThrowObjectWithMomentum
+01:53d7 ThrowObjectWithoutMomentum
+01:53f0 DropObjectIfMickeyHit
+01:545a SpawnBlockObject;Stage specific throwable blocks.
 01:5467 Boss3PickBlockHandler
 01:54a4 ChestHandler
 01:54fe HiddenChestHandler
+01:5591 BlockGfxPointersLookupTable;Indexed by current stage.
+01:55a5 Block1GfxPointers
+01:55a9 Block1GfxPointers@Frame0
+01:55b1 Block2GfxPointers
+01:55b5 Block2GfxPointers@Frame0
+01:55bd _UNK_DATA_
 01:55d5 BarrelHandler
+01:55de BarrelHandler@StateJumpTable
+01:55ec BarrelHandler@SpawnObject
+01:55f9 ReplacedRepickableObject; Restore original position if going offscreen.
+01:5602 LyingRepickableObject; Checks Mickey collision, falls if in air.
+01:5623 CarriedRepickableObject
+01:566e ThrownRepickableObject
 01:56d3 _UNKNOWN_barrel
 01:579a KeyHandler
 01:57c8 LanternHandler
+01:57f6 BarrelGfxPointers
+01:57fa BarrelGfxPointers@Frame0
+01:5802 _UNK_DATA_
 01:581a LeafPlatform1Handler; Swinging leafs, stage 1.
 01:5823 LeafPlatform1Handler@StateJumpTable
 01:5827 LeafPlatform1Handler@SpawnObject;Sets initial velocity based on RAM location.
@@ -648,25 +685,44 @@
 01:5884 LeafPlatform2Handler@StateJumpTable
 01:588a LeafPlatform2Handler@SpawnObject
 01:588f LeafPlatform2Handler@Suspended
-01:589d LeafPlatform2Handler@Falling
+01:589d FallingPlatform
 01:58ae RollingRockHandler; Big rolling rock, stage 1.
 01:58ba RollingRockHandler@StateJumpTable
 01:58c0 RollingRockHandler@SpawnObject
 01:58cd RollingRockHandler@Rolling;Update X velocity and check collision with ground and walls.
 01:5904 RollingRockHandler@Falling;Update Y velocity and destroy when below screen.
 01:590d FallingBlockHandler; Blocks hanging from ceiling, stage 1.
-01:5945 ToyPlatf1Handler; Moving platforms, stage 2.
-01:5988 ToyPlatf2Handler; Blocks that fall when stepping on, stage 2.
+01:591e FallingBlockHandler@StateJumpTable
+01:5924 FallingBlockHandler@Hanging;Check if Mickey is within range to trigger falling state.
+01:5933 FallingBlockHandler@Falling;Update Y velocity, change to explosion on collision with BG.
+01:5945 ToyPlatform1Handler; Moving platforms, stage 2.
+01:594e ToyPlatform1Handler@StateJumpTable
+01:5952 ToyPlatform1Handler@SpawnObject;X range from table based on RAM location of object.
+01:596d MovingPlatform;Moves back and forth within defined X range.
+01:5985 PlatformXRangeTable
+01:5988 ToyPlatform2Handler; Falls when stepping on, stage 2.
+01:5991 ToyPlatform2Handler@StateJumpTable
+01:5997 ToyPlatform2Handler@SpawnObject
+01:59a4 SuspendedPlatform;Used by falling platform, stage 2...
+01:59c8 TrainSmokeGenHandler;Generates train smoke in stage 2.
+01:59d1 TrainSmokeGenHandler@StateJumpTable
+01:59d5 TrainSmokeGenHandler@InitGenerator;Sets timer.
+01:59dd TrainSmokeGenHandler@MakingSmoke;Creates TrainSmoke object at next free slot from $C380, borrowing X/Y from TrainSmokeGen.
 01:5a0f TrainSmokeHandler; Smoke from train chimney that you can ride, stage 2.
+01:5a91 SetPlatformXRange
 01:5a9f LeafPlatformGfxPointers
-01:5aab LeafPlatformGfxPointers@Left
-01:5ab6 LeafPlatformGfxPointers@Right
-01:5ac1 LeafPlatformGfxPointers@Center
+01:5aab LeafPlatformGfxPointers@Frame0
+01:5ab6 LeafPlatformGfxPointers@Frame1
+01:5ac1 LeafPlatformGfxPointers@Frame2
 01:5ac9 RollingRockGfxPointers
 01:5ad5 RollingRockGfxPointers@Frame0
 01:5aef RollingRockGfxPointers@Frame1
 01:5b09 RollingRockGfxPointers@Frame2
-01:5b23 _UNK_DATA_
+01:5b23 ToyPlatform1GfxPointers
+01:5b27 ToyPlatform2GfxPointers
+01:5b2b BluePlatform;Moving
+01:5b39 RedPlatform;Falling
+01:5b41 _UNK_DATA_
 01:5b6e BlockExplosionHandler; Explosion when breaking blocks.
 01:5b77 BlockExplosionHandler@StateJumpTable
 01:5b7b SpawnExplosionObject
@@ -778,10 +834,19 @@
 01:705f CheckMickeyObjectHitboxCollision;BC=MickeyXBox, DE=MickeyYBox
 01:7093 CheckMickeyDeadOrObjectNotVisible;Called when handling Mickey - platform/item interaction.
 01:70be MickeyCoarsePositionToRAM
+01:70cb MickeyNextCoarsePositionToRAM
+01:70e4 CalculateMickeyHitBoxFromTable
 01:70eb CalculateMickeyHitBox
+01:710d CheckMickeyButtAttackingObject;Only rolling rocks and boss 4?
+01:7132 SetMickeyHitByObject
+01:715a CheckMickeyAttackingOrHitByObject
+01:71b2 MickeyObjectCollisionFromBelow
+01:71c5 MickeyObjectCollisionFromSide
+01:71f8 CheckMickeyCollisionWithObject;Red platforms in stage 2 only?
 01:722b MickeyPlatformCollisionHandler
 01:7247 MickeyPlatformCollisionHandler@CheckCollision
-01:725f MickeyHitBox;TODO:one of many?
+01:7253 MickeyHitBoxTable;Indexed by RAM_MickeyHitbox
+01:725f MickeyPlatformHitBox;Other uses?
 01:7263 HitBoxTable;TODO:confirm
 01:72c3 GetBGCollisionForObject
 01:7333 GetBGCollisionForObject@CheckObjectOnScreen
@@ -916,6 +981,19 @@
 07:8c81 WormGfxPointers@SwingRight1
 07:8c8f WormGfxPointers@SwingRight2
 07:8c9d WormGfxPointers@Die
+07:8d50 RainClownGfxPointers
+07:8d5c RainClownGfxPointers@Frame0;bent forward (state 1)
+07:8d6d RainClownGfxPointers@Frame1;arms in air (state 2 and 4)
+07:8d81 RainClownGfxPointers@Frame2;dying pose (state 3)
+07:8d95 _UNK_DATA_;93b6, 93c2, 93ce, 93da
+07:93b6 _UNK_DATA_;highfloor1
+07:93c2 _UNK_DATA_;highfloor2
+07:93ce _UNK_DATA_;highfloor3
+07:93da _UNK_DATA_;highfloor4
+07:93de _UNK_DATA_;lowfloor1
+07:93ea _UNK_DATA_;lowfloor2
+07:93f6 _UNK_DATA_;lowfloor3
+07:9402 _UNK_DATA_;lowfloor4
 08:8000 Stage1BGPalette
 08:8010 Stage1BGPatterns
 08:8b70 Stage1NametableData
@@ -998,6 +1076,7 @@
 0e:804a HaltObjectY_2
 0e:805f SetObjectDirectionTowardsMickey2
 0e:806a SetObjectDirectionTowardsMickey2@SetDirection
+0e:806e CheckMickeyWithinXRangeOfObject_2
 0e:809a GetObjectYVelocity_2
 0e:80a1 GetObjectXVelocity_2
 0e:80a8 ResetObjectYVelocity_2
@@ -1066,7 +1145,16 @@
 0e:9c8e BubbleGenHandler
 0e:9d22 BubbleHandler
 0e:9d98 RainClownHandler
+0e:9dc4 RainClownHandler@StateJumpTable
+0e:9dce RainClownHandler@SpawnObject
+0e:9dd7 RainClownHandler@Standing;transitions to RainMaking or Jumping state depending on player action.
+0e:9e0f RainClownHandler@SetJumpingState
+0e:9e1f RainClownHandler@RainMaking;Resets state after counter reaches 0.
+0e:9e29 RainClownHandler@ResetState
+0e:9e2e RainClownHandler@Jumping;When throwing an object during standing state, clown jumps.
+0e:9e4c DyingClown; Used by both clown enemies.
 0e:9e55 JuggleClownHandler
+0e:9e81 JuggleClownHandler@StateJumpTable
 0e:9f0b JuggleBallHandler
 0e:9f44 RemoteAirpHandler
 0e:a03e RemoteCarHandler
@@ -1091,8 +1179,8 @@
 0e:a63a ArmadilloHandler@GroundCollision
 0e:a646 ArmadilloHandler@HaltObject
 0e:a64c ArmadilloHandler@SetSlopeVelocity
-0e:a655 ArmadilloHandler@GetFloorPointer
-0e:a662 ArmadilloHandler@GetGfxPointer
+0e:a655 GetPointerFromCurrentFloorOffset
+0e:a662 GetObjectGfxPointer
 0e:a66c ArmadilloHandler@FloorPointerTable
 0e:a674 ArmadilloHandler@BottomFloors
 0e:a67c ArmadilloHandler@TopFloors
@@ -1100,6 +1188,10 @@
 0e:a7cc FlowerHandler
 0e:a88f FlowerSeedHandler
 0e:a8de ChessPieceHandler
+0e:a8e7 ChessPieceHandler@StateJumpTable
+0e:a9e1 ChessPieceFloorJumpTable
+0e:a9e9 ChessPieceGfxPointerJumpTable0
+0e:a9f1 ChessPieceGfxPointerJumpTable1
 0e:aa07 CuckooClockHandler
 0e:aacc Cuckoo1Handler
 0e:ab3d Cuckoo2Handler
